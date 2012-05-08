@@ -1,4 +1,4 @@
 RTF-parser
 ==========
 
-This project is a RTF parser in JavaScript.
+This project is a RTF parser in JavaScript!
