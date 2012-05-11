@@ -34,6 +34,7 @@ var rgsymRtf = {
 	"facingp"			 : [ "facingp",  1,      true,      KWD.prop,    "propFacingp"],
 	"landscape"			 : [ "landscape",1,      true,      KWD.prop,    "propLandscape"],
 	"par"				 : [ "par",      0,      false,     KWD.char,    "\n"],
+	"pard"				 : [ "pard",	 0,		 false,		KWD.prop,	 "propDefaultPara"],
 	"\0x0a"				 : [ "\0x0a",    0,      false,     KWD.char,    "\n"],
 	"\0x0d"				 : [ "\0x0d",    0,      false,     KWD.char,    ""],
 	"tab"				 : [ "tab",      0,      false,     KWD.char,    "\t"],
@@ -57,6 +58,10 @@ var rgsymRtf = {
 	"ftncn"				 : [ "ftncn",    0,      false,     KWD.dest,    "destSkip"],
 	"ftnsep"			 : [ "ftnsep",   0,      false,     KWD.dest,    "destSkip"],
 	"ftnsepc"			 : [ "ftnsepc",  0,      false,     KWD.dest,    "destSkip"],
+	"fprq"				 : [ "fprq",	 0,		 false,		KWD.dest,	 "destSkip"],
+	"fcharset"			 : [ "fcharset", 0,		 false,		KWD.dest,	 "destSkip"],
+	"rquote"			 : [ "rquote",	 0,		 false,		KWD.char,	 "'"],
+//	"s"					 : [ "s",		 0,		 false,		KWD.dest,	 "destSkip"],
 	"header"			 : [ "header",   0,      false,     KWD.dest,    "destSkip"],
 	"headerf"			 : [ "headerf",  0,      false,     KWD.dest,    "destSkip"],
 	"headerl"			 : [ "headerl",  0,      false,     KWD.dest,    "destSkip"],
@@ -116,7 +121,7 @@ function TextConverter(){
 
 	var popState = function(){
 		states.pop();
-		curState = 0;
+		if(curState > 0) curState--;
 		return true;
 	}
 
@@ -125,7 +130,7 @@ function TextConverter(){
 		switch(sym[4]){
 			case "ipfnDestSkip":
 				
-				curState = 1;
+				curState ++;
 				return '';
 				break;
 			case "ipfnHex":
@@ -193,7 +198,7 @@ function TextConverter(){
 	var changeDest = function(sym){
 		if(sym[4] == "destSkip"){
 			console.log("Dest skip start : [" + sym[0] + "]");
-			curState = 1;
+			curState ++;
 
 		}
 		return '';
@@ -274,9 +279,21 @@ function TextConverter(){
 		var res = '';
 		var ch = '';
 		var hex = '';
+		var lastchar = 0;
 		while(cur < len){
 			tmp = rtf.charAt(++cur);
+			if(tmp !== "\\" && hex.length > 0){
+				res += String.fromCharCode(parseInt((hex), 16));
+				hex = '';
+			}
 			switch(tmp){
+				case " ":
+					if(lastchar == 1){
+						lastchar = 0;
+					}else{
+						res += tmp;
+					}
+					break;
 				case "{":
 					if(pushState() == true){
 						console.log("push");
@@ -289,6 +306,11 @@ function TextConverter(){
 					break;
 				case "\\":
 					ch = parseKeyword(rtf, len);
+					if( !hexreturn && ch.length == 0){
+						lastchar = 1;
+					}else{
+						lastchar = 0;
+					}
 					if( hexreturn ){
 						if(ch.length > 0){
 							if(parseInt(ch, 16) & 0x80){
@@ -318,6 +340,7 @@ function TextConverter(){
 				case '\r':
 					break;
 				default:
+					lastchar = 0;
 					if( curState == 0 ){
 						res += tmp;
 					}else{
